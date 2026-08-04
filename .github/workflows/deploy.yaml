@@ -47,7 +47,8 @@ jobs:
           node scripts/changed-apps.mjs "${args[@]}" >> "$GITHUB_OUTPUT"
 
       - name: Summary
-        run: echo "Deploying ${{ steps.detect.outputs.count }} app(s): ${{ steps.detect.outputs.apps }}"
+        run: |
+          echo "Deploying ${{ steps.detect.outputs.count }} app(s) — ${{ steps.detect.outputs.apps }}"
 
   deploy:
     needs: detect
