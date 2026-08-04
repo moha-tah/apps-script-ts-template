@@ -14,6 +14,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  rmSync,
   writeFileSync,
 } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -111,10 +112,23 @@ if (shouldCreate) {
         `  apps/${name} was still scaffolded — add its scriptId to apps/${name}/.clasp.json.\n`
     )
   } else {
-    const generated = join(appPath(name), '.clasp.json')
-    if (existsSync(generated)) {
-      scriptId =
-        JSON.parse(readFileSync(generated, 'utf8')).scriptId || scriptId
+    // Depending on the clasp version the generated project file lands in the
+    // project directory or in the repo root; take the scriptId from wherever it
+    // is and leave no stray file behind — ours is written just below.
+    for (const generated of [
+      join(appPath(name), '.clasp.json'),
+      join(ROOT, '.clasp.json'),
+    ]) {
+      if (!existsSync(generated)) continue
+      const found = JSON.parse(readFileSync(generated, 'utf8')).scriptId
+      if (found) scriptId = found
+      if (generated === join(ROOT, '.clasp.json')) rmSync(generated)
+      if (scriptId) break
+    }
+    if (!scriptId) {
+      console.error(
+        '\n✖ clasp reported success but no scriptId was written — add it by hand.\n'
+      )
     }
   }
 }
