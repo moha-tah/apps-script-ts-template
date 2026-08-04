@@ -33,14 +33,18 @@ jobs:
         with:
           node-version: 22
 
+      # Values go through env, not string interpolation: `inputs` does not exist
+      # on a push event, and a workflow_dispatch input is untrusted text.
       - name: Work out which apps to deploy
         id: detect
+        env:
+          BASE: ${{ github.event.before }}
+          HEAD: ${{ github.sha }}
+          ONLY_APP: ${{ github.event.inputs.app }}
         run: |
-          node scripts/changed-apps.mjs \
-            --base "${{ github.event.before }}" \
-            --head "${{ github.sha }}" \
-            ${{ inputs.app != '' && format('--only {0}', inputs.app) || '' }} \
-            >> "$GITHUB_OUTPUT"
+          args=(--base "$BASE" --head "$HEAD")
+          if [ -n "$ONLY_APP" ]; then args+=(--only "$ONLY_APP"); fi
+          node scripts/changed-apps.mjs "${args[@]}" >> "$GITHUB_OUTPUT"
 
       - name: Summary
         run: echo "Deploying ${{ steps.detect.outputs.count }} app(s): ${{ steps.detect.outputs.apps }}"
