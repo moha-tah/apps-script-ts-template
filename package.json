@@ -1,0 +1,49 @@
+{
+  "name": "apps-script-ts-template",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TypeScript template for Google Apps Script projects — one repo, many scripts, shared tooling",
+  "license": "MIT",
+  "scripts": {
+    "new": "node scripts/new-app.mjs",
+    "apps": "node scripts/apps.mjs",
+    "build": "node scripts/build.mjs",
+    "clean": "node scripts/build.mjs --clean",
+    "push": "node scripts/clasp.mjs push",
+    "deploy": "node scripts/clasp.mjs deploy",
+    "open": "node scripts/clasp.mjs open",
+    "logs": "node scripts/clasp.mjs logs",
+    "lint": "eslint --fix .",
+    "lint:check": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --passWithNoTests",
+    "verify": "pnpm run lint:check && pnpm run typecheck && pnpm run test && pnpm run build"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.21.0",
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@google/clasp": "^3.1.3",
+    "@rollup/plugin-alias": "^5.1.1",
+    "@rollup/plugin-typescript": "^12.1.4",
+    "@types/google-apps-script": "^2.0.7",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.10.1",
+    "dotenv": "^17.2.3",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "globals": "^16.5.0",
+    "jest": "^30.2.0",
+    "prettier": "^3.6.2",
+    "rollup": "^4.53.3",
+    "rollup-plugin-cleanup": "^3.2.1",
+    "rollup-plugin-prettier": "^4.1.2",
+    "ts-jest": "^29.4.5",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.47.0"
+  }
+}

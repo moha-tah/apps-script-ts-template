@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "es2020",
+    "lib": ["es2020"],
+    "moduleResolution": "node",
+    "types": ["google-apps-script", "node", "jest"],
+    "baseUrl": ".",
+    "paths": {
+      "@shared": ["libs/shared/index.ts"],
+      "@shared/*": ["libs/shared/*"]
+    },
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false
+  },
+  "include": ["apps/*/src/**/*", "libs/**/*"]
+}

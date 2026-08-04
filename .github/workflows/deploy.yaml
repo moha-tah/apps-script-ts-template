@@ -1,0 +1,86 @@
+name: Deploy
+
+# Deploys only the apps whose files changed — unless something shared changed
+# (libs/, scripts/, root config), in which case every app is redeployed.
+# See scripts/changed-apps.mjs.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'App to deploy (leave empty to deploy all of them)'
+        required: false
+        type: string
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.detect.outputs.apps }}
+      count: ${{ steps.detect.outputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Work out which apps to deploy
+        id: detect
+        run: |
+          node scripts/changed-apps.mjs \
+            --base "${{ github.event.before }}" \
+            --head "${{ github.sha }}" \
+            ${{ inputs.app != '' && format('--only {0}', inputs.app) || '' }} \
+            >> "$GITHUB_OUTPUT"
+
+      - name: Summary
+        run: echo "Deploying ${{ steps.detect.outputs.count }} app(s): ${{ steps.detect.outputs.apps }}"
+
+  deploy:
+    needs: detect
+    if: needs.detect.outputs.count != '0'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJson(needs.detect.outputs.apps) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # clasp reads its credentials from ~/.clasprc.json. Generate one locally
+      # with `pnpm exec clasp login`, then store its contents as a secret.
+      - name: Authenticate clasp
+        env:
+          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
+        run: |
+          if [ -z "$CLASP_CREDENTIALS" ]; then
+            echo "::error::Missing CLASP_CREDENTIALS secret (contents of ~/.clasprc.json)."
+            exit 1
+          fi
+          printf '%s' "$CLASP_CREDENTIALS" > "$HOME/.clasprc.json"
+
+      # CLASP_DEPLOYMENTS maps app -> deployment id, e.g. {"my-app":"AKfycb..."}
+      # Reusing the id keeps each web app URL stable. Apps missing from the map
+      # get a brand new deployment.
+      - name: Deploy ${{ matrix.app }}
+        env:
+          CLASP_DEPLOYMENTS: ${{ secrets.CLASP_DEPLOYMENTS }}
+        run: pnpm run deploy ${{ matrix.app }}
