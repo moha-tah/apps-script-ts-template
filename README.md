@@ -153,15 +153,36 @@ Two different things, and mixing them up is the classic Apps Script bug:
 - **`pnpm run deploy`** publishes a new *version*. Web apps and API executables
   serve the deployed version — for those, a push alone changes nothing.
 
-`deploy` reuses a stored deployment id so the web app URL never changes:
+`deploy` reuses a stored deployment id so the web app URL never changes. Ids
+live in **`deployments.json`** at the repo root:
+
+```json
+{ "my-app": "AKfycb…" }
+```
+
+It is committed on purpose. A deployment id is not a credential — it is the
+public part of the web app URL, and who may call that URL is decided by the
+manifest (`executeAs`, `access`), not by knowing the id. Keeping it next to the
+`scriptId` means `pnpm run deploy` behaves identically on a laptop and in CI,
+with nothing to configure.
+
+Two overrides win over the file, for a one-off deploy or an id somebody would
+rather not commit:
 
 - locally: `MY_APP_DEPLOYMENT_ID=AKfycb…` in `.env` (app name upper-cased,
   dashes as underscores)
-- in CI: one `CLASP_DEPLOYMENTS` secret, `{"my-app":"AKfycb…"}`
+- in CI: a `CLASP_DEPLOYMENTS` secret, `{"my-app":"AKfycb…"}`
 
-With no id stored, a fresh deployment is created and its id printed — save it.
-That bootstrap only happens when *you* run `deploy`; CI never mints a URL
-(see below).
+With no id anywhere, a fresh deployment is created and its id printed — save it
+to `deployments.json`. That bootstrap only happens when *you* run `deploy`; CI
+never mints a URL (see below). To recover the id of an existing deployment:
+
+```bash
+pnpm exec clasp -P apps/my-app list-deployments
+```
+
+Take the versioned one, not `@HEAD` — every project has an automatic `@HEAD`
+test deployment that is not what the web app serves.
 
 ### GitHub Actions
 
@@ -173,8 +194,8 @@ since that can alter every bundle. Two secrets:
 
 | Secret | Contents |
 | --- | --- |
-| `CLASP_CREDENTIALS` | The whole `~/.clasprc.json` produced by `pnpm exec clasp login` |
-| `CLASP_DEPLOYMENTS` | `{"my-app":"AKfycb…"}` — optional, only for web apps/APIs |
+| `CLASP_CREDENTIALS` | The whole `~/.clasprc.json` produced by `pnpm exec clasp login` — the only one required |
+| `CLASP_DEPLOYMENTS` | Optional override for `deployments.json`; normally unset |
 
 You can also deploy by hand from the Actions tab (**Deploy → Run workflow**),
 optionally naming a single app.

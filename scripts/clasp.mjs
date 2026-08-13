@@ -24,6 +24,7 @@ import {
   envPrefix,
   fail,
   readClaspConfig,
+  readDeployments,
   requireApp,
   servesADeployedVersion,
 } from './apps.mjs'
@@ -103,11 +104,14 @@ function build() {
 
 /**
  * Deployment id resolution, in order:
- *   1. CLASP_DEPLOYMENTS — a JSON map {"app-name": "AKfycb..."} (used by CI)
- *   2. <APP>_DEPLOYMENT_ID — one variable per app (used locally, from .env)
- *   3. nothing — a brand new deployment is created, and its id is printed
+ *   1. CLASP_DEPLOYMENTS — a JSON map {"app-name": "AKfycb..."}, optional
+ *      override for anyone who would rather keep the id out of the repo
+ *   2. <APP>_DEPLOYMENT_ID — one variable per app, from .env
+ *   3. deployments.json — the normal place, committed with the code
+ *   4. nothing — a brand new deployment is created, and its id is printed
  *
- * Reusing an id is what keeps a web app URL stable across deployments.
+ * Environment wins over the file so a one-off deploy can be redirected without
+ * editing anything. Reusing an id is what keeps a web app URL stable.
  */
 function resolveDeploymentId() {
   const map = process.env.CLASP_DEPLOYMENTS
@@ -119,7 +123,11 @@ function resolveDeploymentId() {
       fail(`CLASP_DEPLOYMENTS is not valid JSON: ${error.message}`)
     }
   }
-  return process.env[`${envPrefix(app)}_DEPLOYMENT_ID`] || null
+
+  const perApp = process.env[`${envPrefix(app)}_DEPLOYMENT_ID`]
+  if (perApp) return perApp
+
+  return readDeployments()[app] || null
 }
 
 switch (command) {
@@ -160,9 +168,9 @@ switch (command) {
           `\n⚠ ${app} declares a web app / API executable in its manifest: it` +
             ` serves the DEPLOYED version, so this push changed nothing for` +
             ` its users.\n` +
-            `  Deploy it once by hand (pnpm run deploy ${app}), then store the` +
-            ` printed id as ${envPrefix(app)}_DEPLOYMENT_ID in .env and in the` +
-            ` CLASP_DEPLOYMENTS secret.`
+            `  Deploy it once by hand (pnpm run deploy ${app}), then add the` +
+            ` printed id to deployments.json:\n` +
+            `    { "${app}": "AKfycb..." }`
         )
       } else {
         console.log(
@@ -175,7 +183,8 @@ switch (command) {
 
     console.log(
       `\nNo deployment id for "${app}" — creating a new deployment.\n` +
-        `Save the id printed below as ${envPrefix(app)}_DEPLOYMENT_ID in .env,\n` +
+        `Add the id printed below to deployments.json:\n` +
+        `  { "${app}": "AKfycb..." }\n` +
         `otherwise the next deploy creates yet another URL.\n`
     )
     clasp(['deploy', '-d', description, ...forwarded])

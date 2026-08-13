@@ -48,6 +48,24 @@ export function readClaspConfig(app) {
   }
 }
 
+/**
+ * Reads deployments.json at the repo root: {"my-app": "AKfycb..."}.
+ *
+ * A deployment id is not a credential — it is the public part of the web app
+ * URL, and access is decided by the manifest (`executeAs`, `access`), not by
+ * knowing the id. So it lives in the repo next to the scriptId, versioned and
+ * reviewed, instead of in a secret that has to be kept in sync by hand.
+ */
+export function readDeployments() {
+  const file = join(ROOT, 'deployments.json')
+  if (!existsSync(file)) return {}
+  try {
+    return JSON.parse(readFileSync(file, 'utf8'))
+  } catch (error) {
+    throw new Error(`deployments.json is not valid JSON: ${error.message}`)
+  }
+}
+
 /** Reads apps/<app>/appsscript.json, or null when it does not exist yet. */
 export function readManifest(app) {
   const file = appPath(app, 'appsscript.json')
