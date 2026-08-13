@@ -90,14 +90,16 @@ jobs:
           fi
           printf '%s' "$CLASP_CREDENTIALS" > "$HOME/.clasprc.json"
 
-      # CLASP_DEPLOYMENTS maps app -> deployment id, e.g. {"my-app":"AKfycb..."}
-      # Reusing the id keeps each web app URL stable.
+      # Deployment ids come from deployments.json, committed with the code.
+      # Reusing an id keeps each web app URL stable. The CLASP_DEPLOYMENTS
+      # secret below is an optional override, for an id somebody would rather
+      # keep out of the repo — unset is the normal case.
       #
-      # --no-new-deployment: an app missing from the map is pushed and left at
+      # --no-new-deployment: an app with no id anywhere is pushed and left at
       # that, instead of getting a brand new deployment on every run. Most apps
       # are bound scripts that never needed one; for a web app it warns, because
-      # the first deployment is a manual step (its URL has to be stored back
-      # here before anything else can use it).
+      # the first deployment is a manual step (its URL has to be stored back in
+      # deployments.json before anything else can use it).
       - name: Deploy ${{ matrix.app }}
         env:
           CLASP_DEPLOYMENTS: ${{ secrets.CLASP_DEPLOYMENTS }}

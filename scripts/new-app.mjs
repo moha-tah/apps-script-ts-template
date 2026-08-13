@@ -19,7 +19,7 @@ import {
 } from 'node:fs'
 import { dirname, join } from 'node:path'
 
-import { ROOT, appPath, envPrefix, fail } from './apps.mjs'
+import { ROOT, appPath, fail } from './apps.mjs'
 
 const VALUE_FLAGS = ['--type', '--script-id', '--title']
 
@@ -164,6 +164,6 @@ if (!scriptId) {
 console.log(`  ${step++}. pnpm run build ${name}`)
 console.log(`  ${step++}. pnpm run push ${name}`)
 console.log(
-  `  ${step++}. For a web app: pnpm run deploy ${name}, then store the printed id\n` +
-    `     as ${envPrefix(name)}_DEPLOYMENT_ID in .env so the URL stays stable.\n`
+  `  ${step++}. For a web app: pnpm run deploy ${name}, then add the printed id\n` +
+    `     to deployments.json — { "${name}": "AKfycb..." } — so the URL stays stable.\n`
 )
