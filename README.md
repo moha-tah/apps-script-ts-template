@@ -166,12 +166,9 @@ manifest (`executeAs`, `access`), not by knowing the id. Keeping it next to the
 `scriptId` means `pnpm run deploy` behaves identically on a laptop and in CI,
 with nothing to configure.
 
-Two overrides win over the file, for a one-off deploy or an id somebody would
-rather not commit:
-
-- locally: `MY_APP_DEPLOYMENT_ID=AKfycb…` in `.env` (app name upper-cased,
-  dashes as underscores)
-- in CI: a `CLASP_DEPLOYMENTS` secret, `{"my-app":"AKfycb…"}`
+One override wins over the file, for a one-off deploy or an id somebody would
+rather not commit: `CLASP_DEPLOYMENTS={"my-app":"AKfycb…"}`, in `.env` locally
+or as a repository secret in CI.
 
 With no id anywhere, a fresh deployment is created and its id printed — save it
 to `deployments.json`. That bootstrap only happens when *you* run `deploy`; CI

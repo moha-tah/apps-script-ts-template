@@ -21,7 +21,6 @@ import dotenv from 'dotenv'
 
 import {
   ROOT,
-  envPrefix,
   fail,
   readClaspConfig,
   readDeployments,
@@ -104,14 +103,13 @@ function build() {
 
 /**
  * Deployment id resolution, in order:
- *   1. CLASP_DEPLOYMENTS — a JSON map {"app-name": "AKfycb..."}, optional
- *      override for anyone who would rather keep the id out of the repo
- *   2. <APP>_DEPLOYMENT_ID — one variable per app, from .env
- *   3. deployments.json — the normal place, committed with the code
- *   4. nothing — a brand new deployment is created, and its id is printed
+ *   1. CLASP_DEPLOYMENTS — a JSON map {"app-name": "AKfycb..."}, the override
+ *      for a one-off deploy or an id somebody would rather not commit
+ *   2. deployments.json — the normal place, committed with the code
+ *   3. nothing — a brand new deployment is created, and its id is printed
  *
- * Environment wins over the file so a one-off deploy can be redirected without
- * editing anything. Reusing an id is what keeps a web app URL stable.
+ * Environment wins over the file. Reusing an id is what keeps a web app URL
+ * stable across deployments.
  */
 function resolveDeploymentId() {
   const map = process.env.CLASP_DEPLOYMENTS
@@ -123,9 +121,6 @@ function resolveDeploymentId() {
       fail(`CLASP_DEPLOYMENTS is not valid JSON: ${error.message}`)
     }
   }
-
-  const perApp = process.env[`${envPrefix(app)}_DEPLOYMENT_ID`]
-  if (perApp) return perApp
 
   return readDeployments()[app] || null
 }

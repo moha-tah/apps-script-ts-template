@@ -90,11 +90,6 @@ export function servesADeployedVersion(app) {
   return Boolean(manifest.webapp || manifest.executionApi)
 }
 
-/** my-web-app -> MY_WEB_APP (used for per-app environment variables). */
-export function envPrefix(app) {
-  return app.replace(/[^a-zA-Z0-9]+/g, '_').toUpperCase()
-}
-
 /**
  * Resolves an app name from a CLI argument, failing with a helpful message.
  * With a single app in the repo, the argument can be omitted.

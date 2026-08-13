@@ -49,9 +49,9 @@ Single test: `pnpm run test -- path/to/file.spec.ts` or `-t 'name'`.
   Deployment ids live in **`deployments.json`** at the root (committed: an id is
   the public part of the web app URL, not a credential) and are reused to keep
   URLs stable — never create a new deployment for an app that already has one.
-  `resolveDeploymentId()` reads the `CLASP_DEPLOYMENTS` env/secret, then
-  `<APP>_DEPLOYMENT_ID`, then the file: environment overrides the file so a
-  one-off deploy can be redirected without editing anything.
+  `resolveDeploymentId()` reads the `CLASP_DEPLOYMENTS` env/secret first, then
+  the file — environment overrides the file so a one-off deploy can be
+  redirected without editing anything.
 - **Creating a deployment is a human bootstrap step.** It mints a URL that then
   has to be stored back in `.env` / the `CLASP_DEPLOYMENTS` secret, so CD passes
   `--no-new-deployment` and falls back to a plain push for any app missing from
