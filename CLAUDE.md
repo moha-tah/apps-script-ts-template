@@ -48,6 +48,13 @@ Single test: `pnpm run test -- path/to/file.spec.ts` or `-t 'name'`.
   so any change to `doGet`/`doPost` or their dependencies needs `pnpm run deploy`.
   Deployment ids are reused (`CLASP_DEPLOYMENTS` or `<APP>_DEPLOYMENT_ID`) to keep
   URLs stable — never create a new deployment for an app that already has one.
+- **Creating a deployment is a human bootstrap step.** It mints a URL that then
+  has to be stored back in `.env` / the `CLASP_DEPLOYMENTS` secret, so CD passes
+  `--no-new-deployment` and falls back to a plain push for any app missing from
+  the map. `servesADeployedVersion()` in `apps.mjs` (a `webapp`/`executionApi`
+  key in the manifest) decides whether that fallback warns loudly or reports a
+  normal push. `changed-apps.mjs` drops apps with an empty `scriptId` from the
+  matrix — a scaffolded app has nothing to push to, and that must not fail CI.
 
 ## Conventions
 

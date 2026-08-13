@@ -24,6 +24,7 @@ jobs:
     outputs:
       apps: ${{ steps.detect.outputs.apps }}
       count: ${{ steps.detect.outputs.count }}
+      skipped: ${{ steps.detect.outputs.skipped }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -47,8 +48,15 @@ jobs:
           node scripts/changed-apps.mjs "${args[@]}" >> "$GITHUB_OUTPUT"
 
       - name: Summary
+        env:
+          COUNT: ${{ steps.detect.outputs.count }}
+          APPS: ${{ steps.detect.outputs.apps }}
+          SKIPPED: ${{ steps.detect.outputs.skipped }}
         run: |
-          echo "Deploying ${{ steps.detect.outputs.count }} app(s) — ${{ steps.detect.outputs.apps }}"
+          echo "Deploying $COUNT app(s) — $APPS"
+          if [ -n "$SKIPPED" ]; then
+            echo "::warning::No scriptId yet, nothing to push to: $SKIPPED"
+          fi
 
   deploy:
     needs: detect
@@ -83,9 +91,15 @@ jobs:
           printf '%s' "$CLASP_CREDENTIALS" > "$HOME/.clasprc.json"
 
       # CLASP_DEPLOYMENTS maps app -> deployment id, e.g. {"my-app":"AKfycb..."}
-      # Reusing the id keeps each web app URL stable. Apps missing from the map
-      # get a brand new deployment.
+      # Reusing the id keeps each web app URL stable.
+      #
+      # --no-new-deployment: an app missing from the map is pushed and left at
+      # that, instead of getting a brand new deployment on every run. Most apps
+      # are bound scripts that never needed one; for a web app it warns, because
+      # the first deployment is a manual step (its URL has to be stored back
+      # here before anything else can use it).
       - name: Deploy ${{ matrix.app }}
         env:
           CLASP_DEPLOYMENTS: ${{ secrets.CLASP_DEPLOYMENTS }}
-        run: pnpm run deploy ${{ matrix.app }}
+          APP: ${{ matrix.app }}
+        run: pnpm run deploy "$APP" --no-new-deployment

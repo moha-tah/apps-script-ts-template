@@ -6,6 +6,11 @@
  *   node scripts/clasp.mjs open   <app>   open the project in the Apps Script editor
  *   node scripts/clasp.mjs logs   <app>   tail Cloud Logging output
  *
+ * Options:
+ *   --no-new-deployment   deploy: when no deployment id is stored, push and
+ *                         stop instead of minting a brand new deployment.
+ *                         Set by CI — see .github/workflows/deploy.yaml.
+ *
  * Everything after `--` is forwarded to clasp untouched.
  */
 import { spawnSync } from 'node:child_process'
@@ -14,23 +19,46 @@ import { join } from 'node:path'
 
 import dotenv from 'dotenv'
 
-import { ROOT, envPrefix, fail, readClaspConfig, requireApp } from './apps.mjs'
+import {
+  ROOT,
+  envPrefix,
+  fail,
+  readClaspConfig,
+  requireApp,
+  servesADeployedVersion,
+} from './apps.mjs'
 
 dotenv.config({ path: join(ROOT, '.env'), quiet: true })
+
+const OPTIONS = ['--no-new-deployment']
 
 const [command, ...rest] = process.argv.slice(2)
 const separator = rest.indexOf('--')
 const forwarded = separator === -1 ? [] : rest.slice(separator + 1)
-const positional = (separator === -1 ? rest : rest.slice(0, separator)).filter(
-  arg => !arg.startsWith('-')
-)
+const ours = separator === -1 ? rest : rest.slice(0, separator)
+const positional = ours.filter(arg => !arg.startsWith('-'))
+const flags = ours.filter(arg => arg.startsWith('-'))
 
 const COMMANDS = ['push', 'deploy', 'open', 'logs']
 if (!COMMANDS.includes(command)) {
   fail(
-    `Usage: node scripts/clasp.mjs <${COMMANDS.join('|')}> [app] [-- clasp args]`
+    `Usage: node scripts/clasp.mjs <${COMMANDS.join('|')}> [app] [options] [-- clasp args]`
   )
 }
+
+// A mistyped option must not be ignored: --no-new-deployment is what stops CI
+// from creating a deployment per run, so silently dropping it would bring back
+// the exact problem it exists to prevent.
+for (const flag of flags) {
+  if (!OPTIONS.includes(flag)) {
+    fail(
+      `Unknown option "${flag}". Known options: ${OPTIONS.join(', ')}.\n` +
+        `  Arguments meant for clasp itself go after a "--" separator.`
+    )
+  }
+}
+
+const noNewDeployment = flags.includes('--no-new-deployment')
 
 const app = requireApp(positional[0])
 const projectDir = join('apps', app)
@@ -111,17 +139,46 @@ switch (command) {
     clasp(['push', '-f'])
     const deploymentId = resolveDeploymentId()
     const description = `${app} — ${new Date().toISOString().slice(0, 16)}`
+
     if (deploymentId) {
       clasp(['deploy', '-i', deploymentId, '-d', description, ...forwarded])
       console.log(`\n✓ ${app} redeployed (${deploymentId}) — URL unchanged.`)
-    } else {
-      console.log(
-        `\nNo deployment id for "${app}" — creating a new deployment.\n` +
-          `Save the id printed below as ${envPrefix(app)}_DEPLOYMENT_ID in .env,\n` +
-          `otherwise the next deploy creates yet another URL.\n`
-      )
-      clasp(['deploy', '-d', description, ...forwarded])
+      break
     }
+
+    // Creating a deployment mints a URL that then has to be stored somewhere,
+    // so it is a bootstrap step a human does once, knowingly. Repeating it on
+    // every CI run would pile up deployments for apps that never needed one —
+    // hence the flag the CD workflow passes.
+    if (noNewDeployment) {
+      console.log(
+        `\n✓ ${app} pushed. No deployment id stored and --no-new-deployment is` +
+          ` set, so no version was published.`
+      )
+      if (servesADeployedVersion(app)) {
+        console.warn(
+          `\n⚠ ${app} declares a web app / API executable in its manifest: it` +
+            ` serves the DEPLOYED version, so this push changed nothing for` +
+            ` its users.\n` +
+            `  Deploy it once by hand (pnpm run deploy ${app}), then store the` +
+            ` printed id as ${envPrefix(app)}_DEPLOYMENT_ID in .env and in the` +
+            ` CLASP_DEPLOYMENTS secret.`
+        )
+      } else {
+        console.log(
+          `  Its manifest declares no web app, so the editor code is all there` +
+            ` is to update — nothing else to do.`
+        )
+      }
+      break
+    }
+
+    console.log(
+      `\nNo deployment id for "${app}" — creating a new deployment.\n` +
+        `Save the id printed below as ${envPrefix(app)}_DEPLOYMENT_ID in .env,\n` +
+        `otherwise the next deploy creates yet another URL.\n`
+    )
+    clasp(['deploy', '-d', description, ...forwarded])
     break
   }
 

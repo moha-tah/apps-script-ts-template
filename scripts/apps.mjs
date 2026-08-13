@@ -48,6 +48,30 @@ export function readClaspConfig(app) {
   }
 }
 
+/** Reads apps/<app>/appsscript.json, or null when it does not exist yet. */
+export function readManifest(app) {
+  const file = appPath(app, 'appsscript.json')
+  if (!existsSync(file)) return null
+  try {
+    return JSON.parse(readFileSync(file, 'utf8'))
+  } catch (error) {
+    throw new Error(
+      `apps/${app}/appsscript.json is not valid JSON: ${error.message}`
+    )
+  }
+}
+
+/**
+ * True when the app serves a *deployed version* rather than the editor code —
+ * a web app or an API executable. Those are the only ones for which `push`
+ * alone changes nothing for their users.
+ */
+export function servesADeployedVersion(app) {
+  const manifest = readManifest(app)
+  if (!manifest) return false
+  return Boolean(manifest.webapp || manifest.executionApi)
+}
+
 /** my-web-app -> MY_WEB_APP (used for per-app environment variables). */
 export function envPrefix(app) {
   return app.replace(/[^a-zA-Z0-9]+/g, '_').toUpperCase()

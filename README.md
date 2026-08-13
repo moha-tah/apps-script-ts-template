@@ -160,6 +160,8 @@ Two different things, and mixing them up is the classic Apps Script bug:
 - in CI: one `CLASP_DEPLOYMENTS` secret, `{"my-app":"AKfycb…"}`
 
 With no id stored, a fresh deployment is created and its id printed — save it.
+That bootstrap only happens when *you* run `deploy`; CI never mints a URL
+(see below).
 
 ### GitHub Actions
 
@@ -176,6 +178,19 @@ since that can alter every bundle. Two secrets:
 
 You can also deploy by hand from the Actions tab (**Deploy → Run workflow**),
 optionally naming a single app.
+
+Two things the deploy job deliberately does *not* do, so that adding a script to
+the repo never turns CI red or leaves clutter behind on Google:
+
+- **An app missing from `CLASP_DEPLOYMENTS` is pushed, not deployed**
+  (`--no-new-deployment`). Most apps are bound scripts that never needed a
+  deployment, and minting a fresh one on every merge would pile them up. When
+  the app's manifest declares a `webapp` or an `executionApi`, the job warns
+  instead — its first deployment stays a manual `pnpm run deploy <app>`, because
+  the URL that prints has to be stored back in the secret first.
+- **An app with no `scriptId` is skipped entirely**, and reported as a workflow
+  warning. Its Apps Script project does not exist on Google yet, so there is
+  nothing to push to — the normal state of a freshly scaffolded app.
 
 ## Apps Script gotchas worth knowing
 
